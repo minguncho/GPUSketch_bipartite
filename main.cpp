@@ -10,6 +10,7 @@
 #include <omp.h>
 #include <sys/resource.h>
 #include <random>
+#include <parallel/algorithm>
 
 #include "binary_file_stream.h"
 
@@ -93,6 +94,7 @@ Interactions parse_file(std::string filename) {
 
 std::vector<size_t> collect_edges(Interactions interactions) {
   std::cout << "collect_edges() num_threads: " << omp_get_max_threads() << std::endl;
+  auto timer_start = std::chrono::steady_clock::now();
 
   std::vector<size_t> global_edges;
   std::vector<size_t> offsets;
@@ -106,6 +108,11 @@ std::vector<size_t> collect_edges(Interactions interactions) {
   // Reserve memory and set all values to 0
   global_edges.resize(global_num_edges, 0);
 
+  std::chrono::duration<double> duration = std::chrono::steady_clock::now() - timer_start;
+  std::cout << "  Finished initializing buffer for global edges: " << duration.count() << "s " <<  std::endl;
+
+  timer_start = std::chrono::steady_clock::now();
+  /*//Parallelize over subreddit (low number of interactions per subreddit)
   #pragma omp for schedule(dynamic)
   for (size_t s_id = 0; s_id < interactions.subreddit_ids.size(); s_id++) {
     if (s_id % 1000 == 0) std::cout << "collected_edges() s_id: " << s_id << std::endl;
@@ -124,12 +131,54 @@ std::vector<size_t> collect_edges(Interactions interactions) {
         edge_id++;
       }
     }
+  }*/
+
+  // Parallelize over interaction (high number of interactions per subreddit)
+  for (size_t s_id = 0; s_id < interactions.subreddit_ids.size(); s_id++) {
+    std::cout << "collected_edges() s_id: " << s_id << std::endl;
+
+    Subreddit subreddit = interactions.subreddit_ids[s_id];
+    size_t num_users = subreddit.user_ids.size();
+    size_t global_offset = offsets[s_id];
+    std::vector<size_t> local_offset(num_users + 1);
+
+    for (size_t i = 0; i < num_users ; ++i) {
+      size_t deg = (num_users - 1) - i;
+      local_offset[i + 1] = local_offset[i] + deg;
+    }
+
+    size_t num_edges = local_offset[num_users];
+
+    std::vector<node_id_t> user_vec(
+      subreddit.user_ids.begin(),
+      subreddit.user_ids.end()
+    );
+
+    #pragma omp parallel for
+    for (size_t e = 0; e < num_edges; e++) {
+      size_t i = std::upper_bound(local_offset.begin(), local_offset.end(), e) - local_offset.begin() - 1;
+
+      size_t local = e - local_offset[i];
+      size_t j = i + 1 + local;
+
+      node_id_t src = user_vec[i];
+      node_id_t dst = user_vec[j];
+
+      global_edges[global_offset + e] = concat_pairing_fn(src, dst);
+    }
   }
+
+  duration = std::chrono::steady_clock::now() - timer_start;
+  std::cout << "  Finished building global edges: " << duration.count() << "s " <<  std::endl;
   
   // Sort to remove any duplicates
-  std::sort(global_edges.begin(), global_edges.end());
+  timer_start = std::chrono::steady_clock::now();
+  __gnu_parallel::sort(global_edges.begin(), global_edges.end());
+  duration = std::chrono::steady_clock::now() - timer_start;
+  std::cout << "  Finished sorting global edges: " << duration.count() << "s " <<  std::endl;
 
   // Check if there's any edge 0 (did not get filled in)
+  timer_start = std::chrono::steady_clock::now();
   for (auto& edge : global_edges) {
     if (edge == 0) {
       std::cout << "ERROR: Found edge 0 during collect_edges!" << std::endl;
@@ -141,6 +190,8 @@ std::vector<size_t> collect_edges(Interactions interactions) {
 
   // Remove duplicates
   global_edges.erase(std::unique(global_edges.begin(), global_edges.end()), global_edges.end());
+  duration = std::chrono::steady_clock::now() - timer_start;
+  std::cout << "  Finished checking and removing duplicates: " << duration.count() << "s " <<  std::endl;
 
   std::cout << "Total number of edges collected: " << global_num_edges << std::endl;
   std::cout << "Size of global_edges: " << global_edges.size() 
@@ -155,7 +206,7 @@ void build_graph_stream(std::string filename, std::vector<size_t> edges, size_t 
   fout.write_header(num_nodes, num_edges);
 
   int num_threads = omp_get_max_threads();
-  size_t update_buffer_size = 5000;
+  size_t update_buffer_size = 100000;
   std::vector<std::vector<GraphStreamUpdate>> local_updates(num_threads);
 
   #pragma omp parallel
@@ -224,8 +275,8 @@ int main(int argc, char** argv) {
 
   // Shuffle edges 
   timer_start = std::chrono::steady_clock::now();
-  std::default_random_engine e(0);
-  std::shuffle(edges.begin(), edges.end(), e);
+  std::mt19937_64 rng(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+  std::shuffle(edges.begin(), edges.end(), rng);
 
   duration = std::chrono::steady_clock::now() - timer_start;
   std::cout << "Finished shuffling edges: " << duration.count() << "s " <<  std::endl;

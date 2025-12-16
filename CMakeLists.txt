@@ -18,6 +18,8 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 message(STATUS "GraphZeppelin Build Type: ${CMAKE_BUILD_TYPE}")
 
+message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   message(STATUS "Adding GNU compiler flags")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -W -Wall")
