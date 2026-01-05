@@ -135,7 +135,7 @@ std::vector<size_t> collect_edges(Interactions interactions) {
 
   // Parallelize over interaction (high number of interactions per subreddit)
   for (size_t s_id = 0; s_id < interactions.subreddit_ids.size(); s_id++) {
-    std::cout << "collected_edges() s_id: " << s_id << std::endl;
+    //std::cout << "collected_edges() s_id: " << s_id << std::endl;
 
     Subreddit subreddit = interactions.subreddit_ids[s_id];
     size_t num_users = subreddit.user_ids.size();
@@ -217,7 +217,7 @@ void build_graph_stream(std::string filename, std::vector<size_t> edges, size_t 
 
     #pragma omp for schedule(dynamic)
     for (size_t i = 0; i < num_edges; ++i) {
-      if (i % 100000000 == 0) std::cout << "build_graph_stream() current edge it: " << i << std::endl;
+      //if (i % 100000000 == 0) std::cout << "build_graph_stream() current edge it: " << i << std::endl;
 
       GraphStreamUpdate update;
       update.edge = inv_concat_pairing_fn(edges[i]);
