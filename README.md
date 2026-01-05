@@ -18,11 +18,11 @@ Within `./datasets` directory, there are input dataset txt files (`reddit_100act
 There are 4 main stages in the code.
 
 1. Parsing input file.
-2. Build a buffer of global edges. (Allocate memory, insert edges, sort, then remove duplicate edges)
-3. Shuffling edges in global edge buffer. (I expect this step should take the most) 
+2. Building a buffer of global edges. (Allocate memory, insert edges, sort, then remove duplicate edges)
+3. Shuffling edges in the global edge buffer. (I expect this step to take the most) 
 4. Building a binary stream. 
 
-This was log output for `reddit_100active_9sub_corpus.txt` on our machine:
+This was the log output for `reddit_100active_9sub_corpus.txt` on our machine:
 ```
 Dataset has 557314 users, 9 subreddits, and 592543 interactions 
 Finished parsing input file: 0.224628s 
