@@ -3,6 +3,7 @@
 #include <random>
 #include <string>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <vector>
 #include <iostream>
@@ -199,9 +200,13 @@ std::vector<size_t> collect_edges(Interactions interactions) {
   return global_edges;
 }
 
-void build_graph_stream(std::string filename, std::vector<size_t> edges, size_t num_nodes, size_t num_edges) {
-  std::string stream_name = filename.substr(0, filename.length() - 4) + "_stream_binary";
-	BinaryFileStream fout(stream_name, false);
+void build_graph_stream(std::string input_file, std::string output_path, std::vector<size_t> edges, size_t num_nodes, size_t num_edges) {
+
+  std::filesystem::path input_path = input_file;
+  std::string input_filename = input_path.stem().string();
+
+  std::string output_name = output_path + input_filename + "_stream_binary";
+	BinaryFileStream fout(output_name, false);
 
   fout.write_header(num_nodes, num_edges);
 
@@ -246,15 +251,16 @@ void build_graph_stream(std::string filename, std::vector<size_t> edges, size_t 
 }
 
 int main(int argc, char** argv) {
-  if (argc != 2) {
+  if (argc != 3) {
     std::cout << "ERROR: Incorrect number of arguments!" << std::endl;
-    std::cout << "Arguments: input_file" << std::endl;
+    std::cout << "Arguments: input_file output_path" << std::endl;
     exit(EXIT_FAILURE);
   }
 
   auto timer_start = std::chrono::steady_clock::now();
-  std::string filename = argv[1];
-  Interactions interactions = parse_file(filename);
+  std::string input_file = argv[1];
+  std::string output_path = argv[2];
+  Interactions interactions = parse_file(input_file);
 
   std::chrono::duration<double> duration = std::chrono::steady_clock::now() - timer_start;
   std::cout << "Finished parsing input file: " << duration.count() << "s " <<  std::endl;
@@ -283,7 +289,7 @@ int main(int argc, char** argv) {
   std::cout << "Maximum Memory Usage(MiB): " << get_max_mem_used() << std::endl;
 
   timer_start = std::chrono::steady_clock::now();
-  build_graph_stream(filename, edges, num_nodes, num_edges);
+  build_graph_stream(input_file, output_path, edges, num_nodes, num_edges);
 
   duration = std::chrono::steady_clock::now() - timer_start;
   std::cout << "Finished converting to binary stream: " << duration.count() << "s " <<  std::endl;
