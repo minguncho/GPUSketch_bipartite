@@ -52,5 +52,6 @@ FetchContent_MakeAvailable(StreamingUtilities)
 
 add_executable(main main.cpp)
 target_link_libraries(main PRIVATE StreamingUtilities)
+target_link_libraries(main PRIVATE stdc++fs)
 target_compile_options(main PUBLIC -fopenmp)
 target_link_options(main PUBLIC -fopenmp)
