@@ -205,7 +205,7 @@ void build_graph_stream(std::string input_file, std::string output_path, std::ve
   std::filesystem::path input_path = input_file;
   std::string input_filename = input_path.stem().string();
 
-  std::string output_name = output_path + input_filename + "_stream_binary";
+  std::string output_name = output_path + input_filename + "_stream_binary_unshuffled";
 	BinaryFileStream fout(output_name, false);
 
   fout.write_header(num_nodes, num_edges);
@@ -280,13 +280,13 @@ int main(int argc, char** argv) {
   std::cout << "Num Edges: " << num_edges << std::endl;
 
   // Shuffle edges 
-  timer_start = std::chrono::steady_clock::now();
+  /*timer_start = std::chrono::steady_clock::now();
   std::mt19937_64 rng(std::chrono::high_resolution_clock::now().time_since_epoch().count());
   std::shuffle(edges.begin(), edges.end(), rng);
 
   duration = std::chrono::steady_clock::now() - timer_start;
   std::cout << "Finished shuffling edges: " << duration.count() << "s " <<  std::endl;
-  std::cout << "Maximum Memory Usage(MiB): " << get_max_mem_used() << std::endl;
+  std::cout << "Maximum Memory Usage(MiB): " << get_max_mem_used() << std::endl;*/
 
   timer_start = std::chrono::steady_clock::now();
   build_graph_stream(input_file, output_path, edges, num_nodes, num_edges);
